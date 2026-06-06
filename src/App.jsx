@@ -176,6 +176,28 @@ function computeScores(answers) {
 // ─── Pages ───────────────────────────────────────────────────────────────────
 
 function HomePage({ onStart }) {
+  const [themeMode, setThemeMode] = useState("system");
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+
+    const applyTheme = () => {
+      const effectiveTheme = themeMode === "system"
+        ? (mediaQuery.matches ? "dark" : "light")
+        : themeMode;
+      root.dataset.theme = effectiveTheme;
+      root.dataset.themeMode = themeMode;
+    };
+
+    applyTheme();
+
+    if (themeMode === "system") {
+      mediaQuery.addEventListener("change", applyTheme);
+      return () => mediaQuery.removeEventListener("change", applyTheme);
+    }
+  }, [themeMode]);
+
   return (
     <div className="home-page">
       <div className="home-bg-grid" />
@@ -183,11 +205,37 @@ function HomePage({ onStart }) {
       <div className="home-orb orb-2" />
 
       <header className="home-header">
-        <span className="logo-mark">⬡ ASA</span>
         <nav className="home-nav">
-          <a href="#about">About</a>
+          <div className="home-theme-switch">
+            <button
+              type="button"
+              className={`theme-mode-btn ${themeMode === "light" ? "active" : ""}`}
+              onClick={() => setThemeMode("light")}
+              title="Light mode"
+              aria-label="Light mode"
+            >
+              ☀️
+            </button>
+            <button
+              type="button"
+              className={`theme-mode-btn ${themeMode === "dark" ? "active" : ""}`}
+              onClick={() => setThemeMode("dark")}
+              title="Dark mode"
+              aria-label="Dark mode"
+            >
+              🌙
+            </button>
+            <button
+              type="button"
+              className={`theme-mode-btn ${themeMode === "system" ? "active" : ""}`}
+              onClick={() => setThemeMode("system")}
+              title="System mode"
+              aria-label="System mode"
+            >
+              💻
+            </button>
+          </div>
           <a href="#domains">Domains</a>
-          <button className="btn-ghost" onClick={onStart}>Begin</button>
         </nav>
       </header>
 
@@ -198,12 +246,11 @@ function HomePage({ onStart }) {
           <span className="title-accent">startup domain.</span>
         </h1>
         <p className="hero-sub">
-          Answer 30 questions. Get a deep analysis of your ideal startup
-          domain, personality type, readiness score, and an AI-generated
-          roadmap — powered by Gemini.
+          AI Startup Advisor helps students and aspiring entrepreneurs discover
+          the startup domain best suited to their skills, interests, and mindset.
         </p>
         <button className="btn-primary" onClick={onStart}>
-          Start Assessment
+          Begin
           <span className="btn-arrow">→</span>
         </button>
         <div className="hero-stats">
@@ -227,7 +274,7 @@ function HomePage({ onStart }) {
   );
 }
 
-function AssessmentPage({ onComplete }) {
+function AssessmentPage({ onComplete, onHome }) {
   const [current, setCurrent] = useState(0);
   const [answers, setAnswers] = useState(Array(30).fill(null));
   const [selected, setSelected] = useState(null);
@@ -268,11 +315,16 @@ function AssessmentPage({ onComplete }) {
   return (
     <div className="assess-page">
       <div className="assess-top">
-        <button className="back-btn" onClick={goBack} disabled={current === 0}>← Back</button>
-        <div className="progress-bar">
-          <div className="progress-fill" style={{ width: `${progress}%` }} />
+        <div className="assess-top-left">
+          <button className="btn-ghost small" onClick={onHome}>Home</button>
         </div>
-        <span className="q-counter">{current + 1} / {QUESTIONS.length}</span>
+        <div className="assess-top-right">
+          <button className="back-btn" onClick={goBack} disabled={current === 0}>← Back</button>
+          <div className="progress-bar">
+            <div className="progress-fill" style={{ width: `${progress}%` }} />
+          </div>
+          <span className="q-counter">{current + 1} / {QUESTIONS.length}</span>
+        </div>
       </div>
 
       <div className="cat-tabs">
@@ -309,9 +361,7 @@ function ResultPage({ answers, onRestart }) {
   const [aiData, setAiData] = useState(null);
   const [aiError, setAiError] = useState(null);
 
-  const readinessColor =
-    result.readiness >= 70 ? "#6EE7B7" :
-    result.readiness >= 40 ? "#FCD34D" : "#FCA5A5";
+  const readinessColor = "#3B82F6";
 
   const fetchAI = async () => {
     setAiLoading(true);
@@ -358,7 +408,6 @@ Keep responses concise and actionable.`;
       <div className="result-bg-orb" />
 
       <div className="result-header">
-        <span className="logo-mark">⬡ ASA</span>
         <h2>Your Startup Profile</h2>
         <button className="btn-ghost small" onClick={onRestart}>Retake</button>
       </div>
@@ -492,7 +541,7 @@ export default function App() {
     <AppContext.Provider value={{}}>
       <div className="app-shell">
         {page === "home" && <HomePage onStart={() => setPage("assess")} />}
-        {page === "assess" && <AssessmentPage onComplete={handleComplete} />}
+        {page === "assess" && <AssessmentPage onComplete={handleComplete} onHome={() => setPage("home")} />}
         {page === "result" && <ResultPage answers={answers} onRestart={() => setPage("home")} />}
       </div>
     </AppContext.Provider>
