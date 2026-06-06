@@ -200,7 +200,6 @@ function HomePage({ onStart }) {
 
   return (
     <div className="home-page">
-      <div className="home-bg-grid" />
       <div className="home-orb orb-1" />
       <div className="home-orb orb-2" />
 
@@ -357,51 +356,7 @@ function AssessmentPage({ onComplete, onHome }) {
 
 function ResultPage({ answers, onRestart }) {
   const result = computeScores(answers);
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiData, setAiData] = useState(null);
-  const [aiError, setAiError] = useState(null);
-
   const readinessColor = "#3B82F6";
-
-  const fetchAI = async () => {
-    setAiLoading(true);
-    setAiError(null);
-    try {
-      const profile = {
-        top3: result.top3.map(d => d.label),
-        readiness: result.readiness,
-        personality: result.personality,
-        strengths: result.strengths,
-        gaps: result.gaps,
-      };
-      const prompt = `You are an expert startup advisor. Based on this user profile:
-${JSON.stringify(profile, null, 2)}
-
-Respond ONLY with a JSON object (no markdown) with keys:
-- "why": object with domain label keys, each a 2-sentence explanation string
-- "ideas": array of 5 startup idea strings (name + one-line description)
-- "roadmap": array of 5 step strings for a beginner
-
-Keep responses concise and actionable.`;
-
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          messages: [{ role: "user", content: prompt }],
-        }),
-      });
-      const data = await res.json();
-      const text = data.content?.map(c => c.text || "").join("") || "";
-      const clean = text.replace(/```json|```/g, "").trim();
-      setAiData(JSON.parse(clean));
-    } catch (e) {
-      setAiError("Could not load AI analysis. Please try again.");
-    }
-    setAiLoading(false);
-  };
 
   return (
     <div className="result-page">
@@ -468,56 +423,6 @@ Keep responses concise and actionable.`;
             {result.gaps.map(g => <li key={g}>{g}</li>)}
           </ul>
         </div>
-      </section>
-
-      {/* AI Analysis */}
-      <section className="card ai-card">
-        <h3 className="card-title">◈ AI Deep Analysis</h3>
-        {!aiData && !aiLoading && (
-          <div className="ai-cta">
-            <p>Get AI-powered explanations, 5 startup ideas, and your beginner roadmap.</p>
-            <button className="btn-primary" onClick={fetchAI}>Generate AI Analysis</button>
-            {aiError && <p className="ai-error">{aiError}</p>}
-          </div>
-        )}
-        {aiLoading && (
-          <div className="ai-loading">
-            <div className="spinner" />
-            <p>Analysing your profile…</p>
-          </div>
-        )}
-        {aiData && (
-          <div className="ai-results">
-            <div className="ai-section">
-              <h4>Why these domains?</h4>
-              {result.top3.map(d => (
-                <div key={d.id} className="ai-why-item" style={{ "--dc": d.color }}>
-                  <span className="ai-why-label" style={{ color: d.color }}>{d.icon} {d.label}</span>
-                  <p>{aiData.why?.[d.label] || "Strong alignment detected."}</p>
-                </div>
-              ))}
-            </div>
-            <div className="ai-section">
-              <h4>5 Startup Ideas for You</h4>
-              <ol className="idea-list">
-                {(aiData.ideas || []).map((idea, i) => (
-                  <li key={i}>{idea}</li>
-                ))}
-              </ol>
-            </div>
-            <div className="ai-section">
-              <h4>Beginner Roadmap</h4>
-              <ol className="roadmap-list">
-                {(aiData.roadmap || []).map((step, i) => (
-                  <li key={i}>
-                    <span className="step-num">{i + 1}</span>
-                    {step}
-                  </li>
-                ))}
-              </ol>
-            </div>
-          </div>
-        )}
       </section>
 
       <div className="result-footer">
